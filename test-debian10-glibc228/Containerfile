@@ -1,0 +1,59 @@
+FROM docker.io/library/debian:buster
+
+ARG USERNAME=builder
+ARG UID=1000
+ARG GID=1000
+
+ENV HOME=/home/${USERNAME}
+
+RUN sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/sources.list && \
+    sed -i 's|security.debian.org/debian-security|archive.debian.org/debian-security|g' /etc/apt/sources.list && \
+    sed -i '/buster-updates/d' /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    sudo \
+    ca-certificates \
+    git \
+    curl \
+    file \
+    build-essential \
+    cmake \
+    ninja-build \
+    pkg-config \
+    libgl1-mesa-dev \
+    libopengl-dev \
+    libegl1-mesa-dev \
+    libgles2-mesa-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
+    libssl-dev \
+    libxkbcommon-dev \
+    libxkbcommon-x11-dev \
+    libwayland-dev \
+    wayland-protocols \
+    libudev-dev \
+    libxtst-dev \
+    libxi-dev \
+    libxfixes-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxrender-dev \
+    libva-dev \
+    libdrm-dev \
+    libsnappy-dev \
+    libpci-dev \
+    libfuse-dev \
+    libinput-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g ${GID} ${USERNAME} && \
+    useradd -m -u ${UID} -g ${GID} -s /bin/bash ${USERNAME} && \
+    echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \
+    chmod 0440 /etc/sudoers.d/${USERNAME} && \
+    mkdir -p /home/${USERNAME}/code /home/${USERNAME}/Qt && \
+    chown -R ${UID}:${GID} /home/${USERNAME}
+
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+
+CMD ["/bin/bash"]
