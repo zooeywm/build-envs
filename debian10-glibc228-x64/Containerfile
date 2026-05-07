@@ -21,7 +21,6 @@ RUN sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/source
     ninja-build \
     pkg-config \
     libgl1-mesa-dev \
-    libopengl-dev \
     libegl1-mesa-dev \
     libgles2-mesa-dev \
     libprotobuf-dev \
@@ -43,7 +42,17 @@ RUN sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/source
     libsnappy-dev \
     libpci-dev \
     libfuse-dev \
-    libinput-dev && \
+    libinput-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libdbus-1-dev \
+    libpulse-dev \
+    libxcomposite-dev \
+    libvdpau-dev \
+    libnss3-dev \
+    libnspr4-dev \
+    libasound2-dev \
+    libxkbfile-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g ${GID} ${USERNAME} && \

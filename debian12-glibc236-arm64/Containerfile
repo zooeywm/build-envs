@@ -1,0 +1,85 @@
+FROM docker.io/library/debian:bookworm
+
+ARG USERNAME=builder
+ARG UID=1000
+ARG GID=1000
+
+ENV HOME=/home/${USERNAME}
+
+RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' \
+    /etc/apt/sources.list.d/debian.sources
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    sudo \
+    ca-certificates \
+    git \
+    curl \
+    file \
+    locales \
+    build-essential \
+    cmake \
+    ninja-build \
+    pkg-config \
+    libgl1-mesa-dev \
+    libopengl-dev \
+    libegl1-mesa-dev \
+    libgles2-mesa-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
+    libssl-dev \
+    libxkbcommon-dev \
+    libxkbcommon-x11-dev \
+    libwayland-dev \
+    wayland-protocols \
+    libudev-dev \
+    libxtst-dev \
+    libxi-dev \
+    libxfixes-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxrender-dev \
+    libva-dev \
+    libdrm-dev \
+    libsnappy-dev \
+    libpci-dev \
+    libfuse-dev \
+    libinput-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libdbus-1-dev \
+    libpulse-dev \
+    libxcomposite-dev \
+    libvdpau-dev \
+    libnss3-dev \
+    libnspr4-dev \
+    libasound2-dev \
+    libxkbfile-dev \
+    libxdamage-dev \
+    libevent-dev \
+    libwebpmux3 \
+    libwebpdemux2 \
+    libminizip-dev \
+    libxslt1-dev \
+    libtiff6
+
+RUN groupadd -g ${GID} ${USERNAME} && \
+    useradd -m -u ${UID} -g ${GID} -s /bin/bash ${USERNAME} && \
+    echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \
+    chmod 0440 /etc/sudoers.d/${USERNAME} && \
+    mkdir -p /home/${USERNAME}/code /home/${USERNAME}/Qt && \
+    chown -R ${UID}:${GID} /home/${USERNAME}
+
+COPY librockchip_mpp.so /usr/lib/aarch64-linux-gnu/librockchip_mpp.so
+RUN cd /usr/lib/aarch64-linux-gnu && \
+    chmod 755 librockchip_mpp.so && \
+    ln -sf librockchip_mpp.so librockchip_mpp.so.0 && \
+    ln -sf librockchip_mpp.so librockchip_mpp.so.1 && \
+    ln -sf /usr/lib/aarch64-linux-gnu/libwebp.so.7 /usr/lib/aarch64-linux-gnu/libwebp.so.6 && \
+    ln -sf /usr/lib/aarch64-linux-gnu/libtiff.so.6 /usr/lib/aarch64-linux-gnu/libtiff.so.5 && \
+    ldconfig
+
+
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+
+CMD ["/bin/bash"]

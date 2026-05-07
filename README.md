@@ -91,7 +91,6 @@ make run \
 - keep-id UID/GID 映射
 - 宿主机文件权限保持一致
 - Qt SDK 只读挂载
-- ccache 持久化
 - sudo 免密码
 - 持久化 container（退出不删除）
 
@@ -195,7 +194,6 @@ builder
 |---|---|
 | `/home/builder/code` | 项目源码 |
 | `/home/builder/Qt` | Qt SDK |
-| `/home/builder/.ccache` | ccache |
 
 ---
 
