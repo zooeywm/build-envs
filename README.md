@@ -1,35 +1,22 @@
 # build-envs
 
-基于 Podman 的可复现 Linux 编译环境管理仓库。
+基于 Podman 的可复现 Linux 编译环境仓库。
 
-适用于：
+这个仓库当前只做两件事：
 
-- Qt / C++ / Rust 开发
-- 多发行版兼容性构建
-- 多 glibc 版本构建
-- rootless Podman
-- 宿主机源码挂载开发
-- 长期持久化开发容器
+- 构建指定发行版 / glibc / 架构的开发镜像
+- 启动带源码和 Qt SDK 挂载的持久化开发容器
 
----
-
-# 目录结构
-
-```text
-build-envs/
-├── Makefile
-└── debian10-glibc228/
-    └── Containerfile
-```
-
----
-
-# 依赖
-
-需要：
+## 依赖
 
 - Podman
 - GNU Make
+
+Debian / Ubuntu:
+
+```bash
+sudo apt install podman make
+```
 
 Arch Linux:
 
@@ -37,38 +24,27 @@ Arch Linux:
 sudo pacman -S podman make
 ```
 
-Ubuntu / Debian:
+## 支持的环境
+
+| ENV                       | Arch    | Base image        | glibc  | Notes                                  |
+| ------------------------- | ------- | ----------------- | ------ | -------------------------------------- |
+| `debian10-glibc228-x64`   | `amd64` | `debian:buster`   | `2.28` | 兼容旧 glibc 的 x64 构建环境           |
+| `debian12-glibc236-arm64` | `arm64` | `debian:bookworm` | `2.36` | 包含 `librockchip_mpp.so` 和兼容软链接 |
+
+`ENV` 是必填参数；不传会直接报错。
+
+## 常用流程
+
+1. 构建镜像
 
 ```bash
-sudo apt install podman make
+make ENV=debian10-glibc228-x64 build
 ```
 
----
-
-# 构建镜像
+2. 启动开发容器
 
 ```bash
-make build
-```
-
-默认环境：
-
-```text
-debian10-glibc228
-```
-
-镜像名：
-
-```text
-localhost/debian10-glibc228:latest
-```
-
----
-
-# 启动开发容器
-
-```bash
-make run \
+make ENV=debian10-glibc228-x64 run \
   CODE_DIR=/path/to/project \
   QT_DIR=/path/to/Qt
 ```
@@ -76,254 +52,90 @@ make run \
 示例：
 
 ```bash
-make run \
+make ENV=debian10-glibc228-x64 run \
   CODE_DIR=/home/zooeywm/repos/cloudclient \
   QT_DIR=/home/zooeywm/Qt
 ```
 
----
-
-# 容器特性
-
-当前开发容器具有：
-
-- rootless Podman
-- keep-id UID/GID 映射
-- 宿主机文件权限保持一致
-- Qt SDK 只读挂载
-- sudo 免密码
-- 持久化 container（退出不删除）
-
----
-
-# 重新进入已有容器
+3. 再次进入已存在的容器
 
 ```bash
-make start
+make ENV=debian10-glibc228-x64 start
 ```
 
----
-
-# 停止容器
+4. 进入容器的 root shell
 
 ```bash
-make stop
+make ENV=debian10-glibc228-x64 root
 ```
 
----
-
-# 删除容器
+5. 停止或删除容器
 
 ```bash
-make clean
+make ENV=debian10-glibc228-x64 stop
+make ENV=debian10-glibc228-x64 clean
+make ENV=debian10-glibc228-x64 purge
 ```
 
----
+## Make 目标
 
-# 更新 Containerfile 后
+| Target  | 说明                               |
+| ------- | ---------------------------------- |
+| `build` | 构建 `localhost/<ENV>:latest` 镜像 |
+| `run`   | 创建并进入容器                     |
+| `start` | 启动并附着到已有容器               |
+| `root`  | 以 `root` 身份进入已有容器         |
+| `stop`  | 停止容器                           |
+| `clean` | 删除容器                           |
+| `purge` | 删除镜像                           |
 
-重新创建环境：
+容器名固定为 `<ENV>`，镜像名固定为 `localhost/<ENV>:latest`。
+
+## Make 变量
+
+| 变量       | 是否必填     | 默认值    | 说明                                   |
+| ---------- | ------------ | --------- | -------------------------------------- |
+| `ENV`      | 是           | 无        | 目标环境，必须是 `SUPPORTED_ENVS` 之一 |
+| `CODE_DIR` | `run` 时必填 | 无        | 宿主机项目目录                         |
+| `QT_DIR`   | `run` 时必填 | 无        | 宿主机 Qt SDK 目录，只读挂载           |
+| `USERNAME` | 否           | `builder` | 容器内用户名，同时影响 home 路径       |
+| `ENGINE`   | 否           | `podman`  | 容器引擎命令                           |
+
+## 容器内挂载路径
+
+假设 `USERNAME=builder`：
+
+| 容器路径             | 来源       |
+| -------------------- | ---------- |
+| `/home/builder/code` | `CODE_DIR` |
+| `/home/builder/Qt`   | `QT_DIR`   |
+
+容器工作目录默认是 `/home/<USERNAME>/code`。
+
+## 容器行为
+
+- 使用 `--userns=keep-id`，容器内 UID/GID 与宿主机当前用户保持一致
+- `QT_DIR` 以只读方式挂载
+- 容器退出后不会自动删除
+- `root` 目标依赖容器已经存在且正在运行
+
+## 更新环境后的处理
+
+修改 `Containerfile` 或环境目录里的文件后，已有容器不会自动更新。需要手动重建：
 
 ```bash
-make stop
-make clean
-make build
-make run CODE_DIR=... QT_DIR=...
+make ENV=debian10-glibc228-x64 stop
+make ENV=debian10-glibc228-x64 clean
+make ENV=debian10-glibc228-x64 build
+make ENV=debian10-glibc228-x64 run \
+  CODE_DIR=/path/to/project \
+  QT_DIR=/path/to/Qt
 ```
 
-因为：
-
-```text
-build 更新的是 image
-不会自动更新已有 container
-```
-
----
-
-# Makefile 参数
-
-## ENV
-
-切换环境目录：
-
-```bash
-make ENV=ubuntu20-glibc231 build
-```
-
----
-
-## CODE_DIR
-
-宿主机项目目录。
-
-会挂载到：
-
-```text
-/home/builder/code
-```
-
----
-
-## QT_DIR
-
-宿主机 Qt SDK 目录。
-
-会只读挂载到：
-
-```text
-/home/builder/Qt
-```
-
----
-
-## USERNAME
-
-容器内用户名。
-
-默认：
-
-```text
-builder
-```
-
----
-
-# 容器内目录
-
-| 容器路径 | 说明 |
-|---|---|
-| `/home/builder/code` | 项目源码 |
-| `/home/builder/Qt` | Qt SDK |
-
----
-
-# 当前环境
-
-## debian10-glibc228
-
-基础镜像：
-
-```text
-debian:buster
-```
-
-glibc：
-
-```text
-2.28
-```
-
-已安装：
-
-- build-essential
-- cmake
-- ninja
-- protobuf
-- OpenGL/EGL/GLES
-- Wayland
-- libdrm
-- libva
-- xkbcommon
-- OpenSSL
-- input/x11 相关开发库
-
-适用于：
-
-- Qt 6.x
-- Wayland
-- DRM/VAAPI
-- Linux 桌面客户端开发
-
----
-
-# 添加新环境
-
-新增目录：
-
-```text
-ubuntu20-glibc231/
-```
-
-并添加：
-
-```text
-Containerfile
-```
-
-然后：
-
-```bash
-make ENV=ubuntu20-glibc231 build
-```
-
----
-
-# 关于 Containerfile
-
-本项目使用：
-
-```text
-Containerfile
-```
-
-而不是：
-
-```text
-Dockerfile
-```
-
-原因：
-
-- 面向 OCI / Podman 生态
-- 与 Dockerfile 语法兼容
-- Podman 默认优先识别 Containerfile
-
----
-
-# 关于 :Z
-
-挂载参数中的：
-
-```text
-:Z
-```
-
-用于 SELinux relabel。
-
-在未启用 SELinux 的系统上通常无影响。
-
-保留该参数以兼容：
-
-- Fedora
-- RHEL
-- OpenShift
-- 企业 Linux 环境
-
----
-
-# 推荐工作流
-
-首次：
-
-```bash
-make build
-make run CODE_DIR=... QT_DIR=...
-```
-
-后续：
-
-```bash
-make start
-```
-
-退出：
-
-```bash
-exit
-```
-
-停止：
-
-```bash
-make stop
-```
+## 添加新环境
+
+1. 新建一个环境目录，例如 `debian12-glibc236-x64/`
+2. 在目录下添加 `Containerfile`
+3. 如有额外二进制资产，一并放进该目录
+4. 在 `Makefile` 的 `SUPPORTED_ENVS` 中加入新环境名
+5. 使用 `make ENV=<new-env> build` 验证
