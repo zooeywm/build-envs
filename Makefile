@@ -2,6 +2,7 @@ ENGINE ?= podman
 
 SUPPORTED_ENVS := \
 	debian10-glibc228-x64 \
+	debian11-glibc231-arm64 \
 	debian12-glibc236-arm64
 
 ENV :=

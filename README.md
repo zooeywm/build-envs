@@ -29,6 +29,7 @@ sudo pacman -S podman make
 | ENV                       | Arch    | Base image        | glibc  | Notes                                  |
 | ------------------------- | ------- | ----------------- | ------ | -------------------------------------- |
 | `debian10-glibc228-x64`   | `amd64` | `debian:buster`   | `2.28` | 兼容旧 glibc 的 x64 构建环境           |
+| `debian11-glibc231-arm64` | `arm64` | `debian:bullseye` | `2.31` | 包含 `librockchip_mpp.so` 和兼容软链接 |
 | `debian12-glibc236-arm64` | `arm64` | `debian:bookworm` | `2.36` | 包含 `librockchip_mpp.so` 和兼容软链接 |
 
 `ENV` 是必填参数；不传会直接报错。
